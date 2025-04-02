@@ -7,7 +7,10 @@ import jason.asSyntax.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
+import java.util.Set;
 
 /** class that implements the Model of Domestic Robot application */
 public class HouseModel extends GridWorldModel {
@@ -30,53 +33,73 @@ public class HouseModel extends GridWorldModel {
     public static final int GSize = 12;        //Cells
 	public final int GridSize = 1080;    //Width
                           
-    boolean fridgeOpen   = false; // whether the fridge is open                                   
-    boolean carryingDrug = false; // whether the robot is carrying drug
-    boolean medCabinetOpen = false; // whether the medication cabinet is open
+    private boolean fridgeOpen = false; // whether the fridge is open                                   
+    private boolean cabinetOpen = false; // en lugar de medCabinetOpen
+    private int carryingMedicamentos = 0; // en lugar de carryingDrug
     boolean medCabinetStateChanged = false; // whether the cabinet state has changed
     String lastMedicationTaken = null; // último medicamento tomado
     int lastMedicationQuantity = 0; // cantidad restante del último medicamento tomado
     int lastAgentToAct = -1; // último agente que realizó una acción
-    int sipCount        = 0; // how many sip the owner did
-    int availableDrugs  = 2; // how many drugs are available
+    int sipCount = 0; // how many sip the owner did
+    private int availableMedicamentos = 2; // how many medicamentos are available
+    
+    private ArrayList<String> ownerMedicamentos = new ArrayList<>();
+    
+    private int availableParacetamol = 20;
+    private int availableIbuprofeno = 20;
+    private int availableLorazepam = 20;
+    private int availableAspirina = 20;
+    private int availableAmoxicilina = 20;
+
+    private int deliveredParacetamol = 0;
+    private int deliveredIbuprofeno = 0;
+    private int deliveredLorazepam = 0;
+    private int deliveredAspirina = 0;
+    private int deliveredAmoxicilina = 0;
+    
+    private int ownerMove = 0;
+    
+    private List<Integer> bateriaRobots;
 
 	// Initialization of the objects Location on the domotic home scene 
-    Location lSofa	 	= new Location(GSize/2, GSize-2);
-    Location lChair1  	= new Location(GSize/2+2, GSize-3);
-    Location lChair3 	= new Location(GSize/2-1, GSize-3);
-    Location lChair2 	= new Location(GSize/2+1, GSize-4); 
-    Location lChair4 	= new Location(GSize/2, GSize-4); 
-    Location lDeliver 	= new Location(0, GSize-1);
-    Location lWasher 	= new Location(GSize/3, 0);	
-    Location lFridge 	= new Location(2, 0);
-    Location lTable  	= new Location(GSize/2, GSize-3);
-	Location lBed2		= new Location(GSize+2, 0);
-	Location lBed3		= new Location(GSize*2-3,0);
-	Location lBed1		= new Location(GSize+1, GSize*3/4);
-    Location lMedCabinet = new Location(0, 3); // Ubicación del gabinete de medicamentos (en la cocina)
+    public Location lSofa = new Location(GSize/2, GSize-2);
+    public Location lChair1 = new Location(GSize/2+2, GSize-3);
+    public Location lChair3 = new Location(GSize/2-1, GSize-3);
+    public Location lChair2 = new Location(GSize/2+1, GSize-4); 
+    public Location lChair4 = new Location(GSize/2, GSize-4); 
+    public Location lWasher = new Location(GSize/3, 0);	
+    public Location lFridge = new Location(2, 0);
+    public Location lTable = new Location(GSize/2, GSize-3);
+    public Location lVacio = new Location(GSize/2+1, GSize-3);
+	public Location lBed2	= new Location(GSize+2, 0);
+	public Location lBed3	= new Location(GSize*2-3,0);
+	public Location lBed1	= new Location(GSize+1, GSize*3/4);
+    public Location lMedCabinet = new Location(1, 1); // Movido a una posición más accesible en la cocina
+    public Location lCabinet = new Location(1, 1); // Alias para lMedCabinet
+    public Location lDeliver = new Location(3, 3); // Ubicación de entrega de medicamentos
 
 	// Initialization of the doors location on the domotic home scene 
-	Location lDoorHome 	= new Location(0, GSize-1);  
-	Location lDoorKit1	= new Location(0, GSize/2);
-	Location lDoorKit2	= new Location(GSize/2+1, GSize/2-1); 
-	Location lDoorSal1	= new Location(GSize/4, GSize-1);  
-	Location lDoorSal2	= new Location(GSize+1, GSize/2);
-	Location lDoorBed1	= new Location(GSize-1, GSize/2);
-	Location lDoorBath1	= new Location(GSize-1, GSize/4+1);
-	Location lDoorBed3	= new Location(GSize*2-1, GSize/4+1); 	
-	Location lDoorBed2	= new Location(GSize+1, GSize/4+1); 	
-	Location lDoorBath2	= new Location(GSize*2-4, GSize/2+1); 	
+	public Location lDoorHome = new Location(0, GSize-1);  
+	public Location lDoorKit1 = new Location(0, GSize/2);
+	public Location lDoorKit2 = new Location(GSize/2+1, GSize/2-1); 
+	public Location lDoorSal1 = new Location(GSize/4, GSize-1);  
+	public Location lDoorSal2 = new Location(GSize+1, GSize/2);
+	public Location lDoorBed1 = new Location(GSize-1, GSize/2);
+	public Location lDoorBath1 = new Location(GSize-1, GSize/4+1);
+	public Location lDoorBed3 = new Location(GSize*2-1, GSize/4+1); 	
+	public Location lDoorBed2 = new Location(GSize+1, GSize/4+1); 	
+	public Location lDoorBath2 = new Location(GSize*2-4, GSize/2+1); 	
 	
 	// Initialization of the area modeling the home rooms      
-	Area kitchen 	= new Area(0, 0, GSize/2+1, GSize/2-1);
-	Area livingroom	= new Area(GSize/3, GSize/2+1, GSize, GSize-1);
-	Area bath1	 	= new Area(GSize/2+2, 0, GSize-1, GSize/3);
-	Area bath2	 	= new Area(GSize*2-3, GSize/2+1, GSize*2-1, GSize-1);
-	Area bedroom1	= new Area(GSize+1, GSize/2+1, GSize*2-4, GSize-1);
-	Area bedroom2	= new Area(GSize, 0, GSize*3/4-1, GSize/3);
-	Area bedroom3	= new Area(GSize*3/4, 0, GSize*2-1, GSize/3);
-	Area hall		= new Area(0, GSize/2+1, GSize/4, GSize-1);
-	Area hallway	= new Area(GSize/2+2, GSize/2-1, GSize*2-1, GSize/2);
+	public static final Area kitchen = new Area(0, 0, GSize/2+1, GSize/2-1);
+	public static final Area livingroom = new Area(GSize/3, GSize/2+1, GSize, GSize-1);
+	public static final Area bath1 = new Area(GSize/2+2, 0, GSize-1, GSize/3);
+	public static final Area bath2 = new Area(GSize*2-3, GSize/2+1, GSize*2-1, GSize-1);
+	public static final Area bedroom1 = new Area(GSize+1, GSize/2+1, GSize*2-4, GSize-1);
+	public static final Area bedroom2 = new Area(GSize, 0, GSize*3/4-1, GSize/3);
+	public static final Area bedroom3 = new Area(GSize*3/4, 0, GSize*2-1, GSize/3);
+	public static final Area hall = new Area(0, GSize/2+1, GSize/4, GSize-1);
+	public static final Area hallway = new Area(GSize/2+2, GSize/2-1, GSize*2-1, GSize/2);
 	/*
 	Modificar el modelo para que la casa sea un conjunto de habitaciones
 	Dar un codigo a cada habitación y vincular un Area a cada habitación
@@ -86,112 +109,148 @@ public class HouseModel extends GridWorldModel {
 	*/
 	
     public HouseModel() {
-        // create a GSize x 2GSize grid with 3 mobile agent
+        // create a GSize x 2GSize grid with 2 mobile agents (robot y owner)
         super(2*GSize, GSize, 2);
-                                                                           
+        
         // initial location of robot (column 3, line 3)
         // ag code 0 means the robot
-        setAgPos(0, 19, 10);  
-		setAgPos(1, 23, 8);
-		//setAgPos(2, GSize*2-1, GSize*3/5);
+        setAgPos(0, 8, 1);  
+		setAgPos(1, 5, 9);
+		// setAgPos(2, 0, 0); // Comentamos esta línea ya que solo tenemos 2 agentes
 
 		// Do a new method to create literals for each object placed on
 		// the model indicating their nature to inform agents their existence
-		
+				
         // initial location of fridge and owner
         add(FRIDGE, lFridge); 
 		add(WASHER, lWasher); 
-		add(DOOR,   lDeliver); 
-		add(SOFA,   lSofa);
-		add(CHAIR,  lChair2);
-		add(CHAIR,  lChair3);
-		add(CHAIR,  lChair4);
-        add(CHAIR,  lChair1);  
-        add(TABLE,  lTable);  
-		add(BED,	lBed1);
-		add(BED,	lBed2);
-		add(BED,	lBed3);
+		add(SOFA, lSofa);
+		add(CHAIR, lChair2);
+		add(CHAIR, lChair3);
+		add(CHAIR, lChair4);
+        add(CHAIR, lChair1);  
+        add(TABLE, lTable);  
+		add(BED, lBed1);
+		add(BED, lBed2);
+		add(BED, lBed3);
         add(MEDCABINET, lMedCabinet); // Añadir gabinete de medicamentos
-		
-        // Inicializar medicamentos disponibles
-        medications.put("paracetamol", new Medication("paracetamol", 30, "8h,16h"));
-        medications.put("ibuprofeno", new Medication("ibuprofeno", 20, "12h"));
-        medications.put("aspirina", new Medication("aspirina", 25, "20h"));
-        medications.put("vitamina", new Medication("vitamina", 60, "8h"));
-        medications.put("insulina", new Medication("insulina", 10, "7h,19h"));
+        
+        addWall(GSize/2+1, 0, GSize/2+1, GSize/2-2);  		
+        add(DOOR, lDoorKit2);                              
+        //addWall(GSize/2+1, GSize/2-1, GSize/2+1, GSize-2);  
+        add(DOOR, lDoorSal1); 
 
-		addWall(GSize/2+1, 0, GSize/2+1, GSize/2-2);  		
-		add(DOOR, lDoorKit2);                              
-		//addWall(GSize/2+1, GSize/2-1, GSize/2+1, GSize-2);  
-		add(DOOR, lDoorSal1); 
+        addWall(GSize/2+1, GSize/4+1, GSize-2, GSize/4+1);   
+        //addWall(GSize+1, GSize/4+1, GSize*2-1, GSize/4+1);   
+        add(DOOR, lDoorBath1); 
+        //addWall(GSize+1, GSize*2/5+1, GSize*2-2, GSize*2/5+1);   
+        addWall(GSize+2, GSize/4+1, GSize*2-2, GSize/4+1);   
+        addWall(GSize*2-6, 0, GSize*2-6, GSize/4);
+        add(DOOR, lDoorBed1); 
+        
+        addWall(GSize, 0, GSize, GSize/4+1);  
+        //addWall(GSize+1, GSize/4+1, GSize, GSize/4+1);  
+        add(DOOR, lDoorBed2); 
+        
+        addWall(1, GSize/2, GSize/2+1, GSize/2);            
+        add(DOOR, lDoorKit1);                
+        add(DOOR, lDoorSal2);
 
-		addWall(GSize/2+1, GSize/4+1, GSize-2, GSize/4+1);   
-		//addWall(GSize+1, GSize/4+1, GSize*2-1, GSize/4+1);   
- 		add(DOOR, lDoorBath1); 
-		//addWall(GSize+1, GSize*2/5+1, GSize*2-2, GSize*2/5+1);   
-		addWall(GSize+2, GSize/4+1, GSize*2-2, GSize/4+1);   
-		addWall(GSize*2-6, 0, GSize*2-6, GSize/4);
-		add(DOOR, lDoorBed1); 
-		
-		addWall(GSize, 0, GSize, GSize/4+1);  
-		//addWall(GSize+1, GSize/4+1, GSize, GSize/4+1);  
- 		add(DOOR, lDoorBed2); 
-		
-		addWall(1, GSize/2, GSize-1, GSize/2);            
-		add(DOOR, lDoorKit1);                
-		add(DOOR, lDoorSal2);
-
-		addWall(GSize/4, GSize/2+1, GSize/4, GSize-2);            
-		
-		addWall(GSize, GSize/2, GSize, GSize-1);  
-		addWall(GSize*2-4, GSize/2+2, GSize*2-4, GSize-1);  
-		addWall(GSize+2, GSize/2, GSize*2-1, GSize/2);  
- 		add(DOOR, lDoorBed3);  
- 		add(DOOR, lDoorBath2);  
-		
-     }
+        addWall(GSize/4, GSize/2+1, GSize/4, GSize-2);            
+        
+        addWall(GSize, GSize/2, GSize, GSize-1);  
+        addWall(GSize*2-4, GSize/2+2, GSize*2-4, GSize-1);  
+        addWall(GSize/2+3, GSize/2, GSize, GSize/2);  
+        addWall(GSize+2, GSize/2, GSize*2-1, GSize/2);  
+        add(DOOR, lDoorBed3);  
+        add(DOOR, lDoorBath2);  
+    }
+    
+    // Clase interna para almacenar información de medicamentos
+    class Medication {
+        String name;
+        int quantity;
+        String schedule;
+        
+        public Medication(String name, int quantity, String schedule) {
+            this.name = name;
+            this.quantity = quantity;
+            this.schedule = schedule;
+        }
+    }
+    
+    // Mapa para almacenar medicamentos
+    Map<String, Medication> medications = new HashMap<>();
 	
-
-	 String getRoom (Location thing){  
-		
+	public String getRoom(Location thing) {
 		String byDefault = "kitchen";
-
-		if (bath1.contains(thing)){
+		
+		if (bath1.contains(thing)) {
 			byDefault = "bath1";
-		};
-		if (bath2.contains(thing)){
+		}
+		if (bath2.contains(thing)) {
 			byDefault = "bath2";
-		};
-		if (bedroom1.contains(thing)){
+		}
+		if (bedroom1.contains(thing)) {
 			byDefault = "bedroom1";
-		};
-		if (bedroom2.contains(thing)){
+		}
+		if (bedroom2.contains(thing)) {
 			byDefault = "bedroom2";
-		};
-		if (bedroom3.contains(thing)){
+		}
+		if (bedroom3.contains(thing)) {
 			byDefault = "bedroom3";
-		};
-		if (hallway.contains(thing)){
+		}
+		if (hallway.contains(thing)) {
 			byDefault = "hallway";
-		};
-		if (livingroom.contains(thing)){
+		}
+		if (livingroom.contains(thing)) {
 			byDefault = "livingroom";
-		};
-		if (hall.contains(thing)){
+		}
+		if (hall.contains(thing)) {
 			byDefault = "hall";
-		};
+		}
 		return byDefault;
 	}
-
-	boolean sit(int Ag, Location dest) { 
-		Location loc = getAgPos(Ag);
-		if (loc.isNeigbour(dest)) {
-			setAgPos(Ag, dest);
-		};
-		return true;
+	
+	public Location getRoomCenter(String thing) {
+		Location toret = kitchen.center();
+		
+		if (thing.equals("bath1")) {
+			toret = bath1.center();
+		}
+		if (thing.equals("bath2")) {
+			toret = bath2.center();
+		}
+		if (thing.equals("bedroom1")) {
+			toret = bedroom1.center();
+		}
+		if (thing.equals("bedroom2")) {
+			toret = bedroom2.center();
+		}
+		if (thing.equals("bedroom3")) {
+			toret = bedroom3.center();
+		}
+		if (thing.equals("hallway")) {
+			toret = hallway.center();
+		}
+		if (thing.equals("livingroom")) {
+			toret = livingroom.center();
+		}
+		if (thing.equals("hall")) {
+			toret = hall.center();
+		}
+		return toret;
 	}
 
-	boolean openFridge() {
+    boolean sit(int Ag, Location dest) {
+        Location loc = getAgPos(Ag);
+        if (loc.isNeigbour(dest)) {
+            setAgPos(Ag, dest);
+        }
+        return true;
+    }
+
+    boolean openFridge() {
         if (!fridgeOpen) {
             fridgeOpen = true;
             return true;
@@ -209,6 +268,16 @@ public class HouseModel extends GridWorldModel {
         }
     }   
 
+    boolean openCabinet() {
+        cabinetOpen = true;
+        return true;
+    }
+
+    boolean closeCabinet() {
+        cabinetOpen = false;
+        return true;
+    }
+
     boolean canMoveTo(int Ag, int x, int y) {
 		// Verificar que la posición está dentro de los límites del grid
 		if(!(x<0 || x>=24 || y<0 || y>=12))
@@ -225,11 +294,11 @@ public class HouseModel extends GridWorldModel {
 				
 				// Continuar con la lógica original
 				if (Ag < 1) {
-					return (isFree(x, y) && !hasObject(TABLE, x, y) &&
-							!hasObject(SOFA, x, y) && !hasObject(CHAIR, x, y) && !hasObject(FRIDGE, x, y) &&
-							!hasObject(MEDCABINET, x, y) && !hasObject(WASHER, x, y));
+					return (isFree(x, y) && !hasObject(WASHER, x, y) && !hasObject(TABLE, x, y) &&
+							!hasObject(SOFA, x, y) && !hasObject(CHAIR, x, y) && !hasObject(FRIDGE, x, y) && !hasObject(BED, x, y)
+							&& !hasObject(MEDCABINET, x, y));
 				} else {
-					return (isFree(x, y) && !hasObject(TABLE, x, y) && !hasObject(FRIDGE, x, y)
+					return (isFree(x, y) && !hasObject(WASHER, x, y) && !hasObject(TABLE, x, y) && !hasObject(FRIDGE, x, y)
 							&& !hasObject(MEDCABINET, x, y));
 				}
 			}
@@ -237,432 +306,437 @@ public class HouseModel extends GridWorldModel {
 		
 		return false;
 	}
-
-	boolean moveOneStep(int Ag, Location dest) {
-	    Location currentPos = getAgPos(Ag);
-	    Location nextPos = new Location(currentPos.x, currentPos.y);
-	    
-	    // Calcular la dirección preferida (la que más acerca al destino)
-	    int dx = Integer.compare(dest.x, currentPos.x); // -1, 0, o 1
-	    int dy = Integer.compare(dest.y, currentPos.y); // -1, 0, o 1
-	    
-	    // Decidir si moverse horizontal o verticalmente
-	    boolean moveHorizontal = false;
-	    
-	    // Si la distancia horizontal es mayor o igual que la vertical, priorizar movimiento horizontal
-	    if (Math.abs(dest.x - currentPos.x) >= Math.abs(dest.y - currentPos.y)) {
-	        moveHorizontal = true;
-	    } else {
-	        moveHorizontal = false;
-	    }
-	    
-	    // Intentar moverse en la dirección prioritaria primero
-	    if (moveHorizontal && dx != 0) {
-	        // Intentar moverse horizontalmente
-	        nextPos.x = currentPos.x + dx;
-	        if (canMoveTo(Ag, nextPos.x, nextPos.y)) {
-	            setAgPos(Ag, nextPos);
-	            return true;
-	        }
-	    } else if (!moveHorizontal && dy != 0) {
-	        // Intentar moverse verticalmente
-	        nextPos.y = currentPos.y + dy;
-	        if (canMoveTo(Ag, nextPos.x, nextPos.y)) {
-	            setAgPos(Ag, nextPos);
-	            return true;
-	        }
-	    }
-	    
-	    // Si no se puede mover en la dirección prioritaria, intentar la otra dirección
-	    if (moveHorizontal && dy != 0) {
-	        // Intentar moverse verticalmente como segunda opción
-	        nextPos = new Location(currentPos.x, currentPos.y + dy);
-	        if (canMoveTo(Ag, nextPos.x, nextPos.y)) {
-	            setAgPos(Ag, nextPos);
-	            return true;
-	        }
-	    } else if (!moveHorizontal && dx != 0) {
-	        // Intentar moverse horizontalmente como segunda opción
-	        nextPos = new Location(currentPos.x + dx, currentPos.y);
-	        if (canMoveTo(Ag, nextPos.x, nextPos.y)) {
-	            setAgPos(Ag, nextPos);
-	            return true;
-	        }
-	    }
-	    
-	    // Si no se pudo mover en ninguna dirección preferida, intentar cualquier dirección disponible
-	    int[][] directions = {{1,0}, {-1,0}, {0,1}, {0,-1}}; // derecha, izquierda, abajo, arriba
-	    
-	    for (int[] dir : directions) {
-	        nextPos = new Location(currentPos.x + dir[0], currentPos.y + dir[1]);
-	        if (canMoveTo(Ag, nextPos.x, nextPos.y)) {
-	            setAgPos(Ag, nextPos);
-	            return true;
-	        }
-	    }
-	    
-	    // No se pudo mover en ninguna dirección
-	    return false;
-	}
-
-	boolean moveTowards(int Ag, Location dest) {
-	    Location currentPos = getAgPos(Ag);
-	    
-	    // Si ya estamos en el destino, no hay que moverse
-	    if (currentPos.equals(dest)) {
-	        return true;
-	    }
-	    
-	    // Utilizar el nuevo método para mover solo una casilla
-	    return moveOneStep(Ag, dest);
-	}
-
-    boolean getDrug() {
-        // Verificar si el último agente que actuó está cerca del gabinete
-        int ag = getLastAgentToAct();
-        System.out.println("Intentando obtener medicamento. Último agente: " + ag);
-        
-        if (ag >= 0) {
-            Location agPos = getAgPos(ag);
-            System.out.println("Posición del agente: " + agPos.x + "," + agPos.y);
-            System.out.println("Posición del gabinete: " + lMedCabinet.x + "," + lMedCabinet.y);
-            System.out.println("Distancia al gabinete: " + agPos.distance(lMedCabinet));
-            
-            if (agPos.distance(lMedCabinet) <= 1) {
-                if (medCabinetOpen && !carryingDrug) {
-                    // Verificar si hay medicamentos disponibles
-                    boolean hayMedicamentos = false;
-                    for (Medication med : medications.values()) {
-                        if (med.quantity > 0) {
-                            hayMedicamentos = true;
-                            break;
-                        }
-                    }
-                    
-                    if (hayMedicamentos) {
-                        carryingDrug = true;
-                        System.out.println("El agente " + ag + " ha obtenido un medicamento del gabinete.");
-                        return true;
-                    } else {
-                        System.out.println("No hay medicamentos disponibles en el gabinete.");
-                    }
-                } else {
-                    if (!medCabinetOpen) {
-                        System.out.println("El gabinete de medicamentos está cerrado.");
-                    }
-                    if (carryingDrug) {
-                        System.out.println("El agente ya está llevando un medicamento.");
-                    }
-                }
-            } else {
-                System.out.println("El agente " + ag + " no está lo suficientemente cerca del gabinete de medicamentos para obtener un medicamento.");
-            }
-        } else {
-            System.out.println("No se ha registrado ningún agente que intente obtener un medicamento.");
-        }
-        return false;
-    }
-
-    boolean addDrug(int n) {
-        availableDrugs += n;
-        //if (view != null)
-        //    view.update(lFridge.x,lFridge.y);
-        return true;
-    }
-
-    boolean handInDrug() {
-        // Verificar si el último agente que actuó está cerca del propietario
-        int ag = getLastAgentToAct();
-        System.out.println("Intentando entregar medicamento. Último agente: " + ag);
-        
-        if (ag >= 0) {
-            Location agPos = getAgPos(ag);
-            Location ownerPos = getAgPos(1); // El propietario es el agente 1
-            
-            System.out.println("Posición del agente: " + agPos.x + "," + agPos.y);
-            System.out.println("Posición del propietario: " + ownerPos.x + "," + ownerPos.y);
-            System.out.println("Distancia al propietario: " + agPos.distance(ownerPos));
-            
-            if (agPos.distance(ownerPos) <= 1) {
-                if (carryingDrug) {
-                    sipCount = 10;
-                    carryingDrug = false;
-                    System.out.println("El agente " + ag + " ha entregado el medicamento al propietario.");
-                    return true;
-                } else {
-                    System.out.println("El agente no está llevando ningún medicamento para entregar.");
-                }
-            } else {
-                System.out.println("El agente " + ag + " no está lo suficientemente cerca del propietario para entregarle el medicamento.");
-            }
-        } else {
-            System.out.println("No se ha registrado ningún agente que intente entregar un medicamento.");
-        }
-        return false;
-    }
-
-    boolean sipDrug() {
-        if (sipCount > 0) {
-            sipCount--;
-            //if (view != null)
-                //view.update(lOwner.x,lOwner.y);
-            return true;
-        } else {
-            return false;
-        }
+	
+	public int getOwnerMove() {
+        return ownerMove;
     }
     
-    // Representación de medicamentos con clase interna
-    class Medication {
-        String name;
-        int quantity;
-        String schedule; // Horario de toma
-        
-        public Medication(String name, int quantity, String schedule) {
-            this.name = name;
-            this.quantity = quantity;
-            this.schedule = schedule;
-        }
-    }
-    
-    // Lista de medicamentos en el gabinete
-    java.util.Map<String, Medication> medications = new java.util.HashMap<>();
-
-    // Método para abrir el gabinete de medicamentos
-    boolean openMedCabinet() {
-        // Verificar si el último agente que actuó está cerca del gabinete
-        int ag = getLastAgentToAct();
-        System.out.println("Intentando abrir el gabinete de medicamentos. Último agente: " + ag);
-        
-        if (ag >= 0) {
-            Location agPos = getAgPos(ag);
-            System.out.println("Posición del agente: " + agPos.x + "," + agPos.y);
-            System.out.println("Posición del gabinete: " + lMedCabinet.x + "," + lMedCabinet.y);
-            System.out.println("Distancia al gabinete: " + agPos.distance(lMedCabinet));
-            
-            if (agPos.distance(lMedCabinet) <= 1) {
-                System.out.println("El agente " + ag + " está lo suficientemente cerca del gabinete.");
-                if (!medCabinetOpen) {
-                    medCabinetOpen = true;
-                    medCabinetStateChanged = true;
-                    System.out.println("Gabinete de medicamentos abierto correctamente.");
-                    return true;
-                } else {
-                    System.out.println("El gabinete ya está abierto, consideramos la acción como exitosa.");
-                    return true; // Retornar true aunque el gabinete ya esté abierto
-                }
+    public void calculateOwnerDir(int Ag, Location dest) {
+        if(Ag == 1) {
+            Location ag = getAgPos(Ag);
+            if(ag.x + 1 == dest.x) {
+                ownerMove = 1;
+            } else if(ag.x - 1 == dest.x) {
+                ownerMove = 3;
+            } else if(ag.y + 1 == dest.y) {
+                ownerMove = 2;
             } else {
-                System.out.println("El agente " + ag + " no está lo suficientemente cerca del gabinete de medicamentos para abrirlo.");
-            }
-        } else {
-            System.out.println("No se ha registrado ningún agente que intente abrir el gabinete.");
-        }
-        return false;
-    }
-
-    // Método para cerrar el gabinete de medicamentos
-    boolean closeMedCabinet() {
-        // Verificar si el último agente que actuó está cerca del gabinete
-        int ag = getLastAgentToAct();
-        if (ag >= 0) {
-            Location agPos = getAgPos(ag);
-            if (agPos.distance(lMedCabinet) <= 1) {
-                if (medCabinetOpen) {
-                    medCabinetOpen = false;
-                    medCabinetStateChanged = true;
-                    System.out.println("Gabinete de medicamentos cerrado correctamente.");
-                    return true;
-                } else {
-                    System.out.println("El gabinete ya está cerrado, consideramos la acción como exitosa.");
-                    return true; // Retornar true aunque el gabinete ya esté cerrado
-                }
-            } else {
-                System.out.println("El agente " + ag + " no está lo suficientemente cerca del gabinete de medicamentos para cerrarlo.");
+                ownerMove = 0;
             }
         }
-        return false;
-    }
-    
-    // Método para obtener la información de un medicamento
-    Medication getMedicationInfo(String medName) {
-        return medications.get(medName);
-    }
-    
-    // Método para tomar una unidad de un medicamento
-    boolean takeMedication(String medName) {
-        // Verificar si el último agente que actuó está cerca del gabinete
-        int ag = getLastAgentToAct();
-        if (ag >= 0) {
-            Location agPos = getAgPos(ag);
-            if (agPos.distance(lMedCabinet) <= 1) {
-                Medication med = medications.get(medName);
-                if (med != null && med.quantity > 0 && medCabinetOpen) {
-                    med.quantity--;
-                    
-                    // Guardar información para la visualización
-                    lastMedicationTaken = medName;
-                    lastMedicationQuantity = med.quantity;
-                    
-                    System.out.println("El agente " + ag + " ha tomado el medicamento " + medName + ". Quedan " + med.quantity + " unidades.");
-                    return true;
-                } else {
-                    if (med == null) {
-                        System.out.println("El medicamento " + medName + " no existe en el gabinete.");
-                    } else if (med.quantity <= 0) {
-                        System.out.println("No quedan unidades del medicamento " + medName + ".");
-                    } else if (!medCabinetOpen) {
-                        System.out.println("El gabinete de medicamentos está cerrado.");
-                    }
-                }
-            } else {
-                System.out.println("El agente " + ag + " no está lo suficientemente cerca del gabinete de medicamentos para tomar un medicamento.");
-            }
-        }
-        return false;
-    }
-    
-    // Método para añadir medicamento al gabinete
-    boolean addMedication(String medName, int quantity) {
-        Medication med = medications.get(medName);
-        if (med != null) {
-            med.quantity += quantity;
-        } else {
-            medications.put(medName, new Medication(medName, quantity, ""));
-        }
-        return true;
-    }
-    
-    // Método para actualizar el horario de un medicamento
-    boolean updateMedicationSchedule(String medName, String schedule) {
-        Medication med = medications.get(medName);
-        if (med != null) {
-            med.schedule = schedule;
-            return true;
-        }
-        return false;
-    }
-    
-    // Método para obtener los nombres de todos los medicamentos
-    java.util.Set<String> getMedicationNames() {
-        return medications.keySet();
-    }
-    
-    /**
-     * Obtiene el mapa completo de medicamentos
-     */
-    java.util.Map<String, Medication> getMedicationMap() {
-        return medications;
-    }
-    
-    /**
-     * Obtiene y luego resetea el último medicamento tomado
-     */
-    String getAndResetLastMedicationTaken() {
-        String result = lastMedicationTaken;
-        lastMedicationTaken = null;
-        return result;
-    }
-    
-    /**
-     * Obtiene la cantidad actual del último medicamento tomado
-     */
-    int getLastMedicationQuantity() {
-        return lastMedicationQuantity;
-    }
-    
-    /**
-     * Obtiene y resetea si el estado del gabinete cambió
-     */
-    boolean getMedCabinetStateChanged() {
-        boolean result = medCabinetStateChanged;
-        medCabinetStateChanged = false;
-        return result;
-    }
-    
-    /**
-     * Establece el último agente que actuó
-     */
-    void setLastAgentToAct(int ag) {
-        this.lastAgentToAct = ag;
-    }
-    
-    /**
-     * Obtiene el último agente que actuó
-     */
-    int getLastAgentToAct() {
-        return lastAgentToAct;
     }
 
-    /**
-     * Verifica si dos ubicaciones son adyacentes (están una al lado de la otra)
-     * Las ubicaciones son adyacentes si están a distancia 1 en posición horizontal o vertical
-     */
-    boolean areAdjacent(Location loc1, Location loc2) {
-        return loc1.distance(loc2) == 1;
-    }
-    
-    /**
-     * Verifica si un agente está adyacente al gabinete de medicamentos
-     */
-    boolean isNextToMedCabinet(int ag) {
-        Location agentLoc = getAgPos(ag);
-        return areAdjacent(agentLoc, lMedCabinet);
-    }
-    
-    /**
-     * Verifica si un agente está adyacente a otro agente
-     */
-    boolean isNextToAgent(int ag1, int ag2) {
-        Location loc1 = getAgPos(ag1);
-        Location loc2 = getAgPos(ag2);
-        return areAdjacent(loc1, loc2);
-    }
-    
-    /**
-     * Mueve al agente a una posición adyacente al objetivo especificado
-     * @param ag El índice del agente a mover
-     * @param target El objetivo ("medcabinet", "owner" o "enfermera")
-     * @return true si se pudo mover, false en caso contrario
-     */
-    boolean moveToAdjacentPosition(int ag, String target) {
-        Location targetLoc = null;
-        
-        if (target.equals("medcabinet")) {
-            targetLoc = lMedCabinet;
-        } else if (target.equals("owner")) {
-            targetLoc = getAgPos(1); // Posición del owner
-        } else if (target.equals("enfermera")) {
-            targetLoc = getAgPos(0); // Posición de la enfermera
-        }
-        
-        if (targetLoc == null) {
+    public boolean moveTowards(int Ag, Location dest) {
+        // Si el destino es null, no intentar moverse
+        if (dest == null) {
             return false;
         }
         
-        // Si ya está adyacente, no necesita moverse
-        Location agentLoc = getAgPos(ag);
-        if (areAdjacent(agentLoc, targetLoc)) {
+        // Obtener la posición actual del agente
+        Location agPos = getAgPos(Ag);
+        
+        // Calcular un movimiento directo si está adyacente o en línea recta
+        if (agPos.distance(dest) == 1) {
+            // Si está adyacente, moverse directamente
+            calculateOwnerDir(Ag, dest);
+            setAgPos(Ag, dest);
             return true;
-        }
-        
-        // Intentar moverse a una posición adyacente
-        // Probar las cuatro direcciones posibles (arriba, abajo, izquierda, derecha)
-        int[][] directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
-        
-        for (int[] dir : directions) {
-            int newX = targetLoc.x + dir[0];
-            int newY = targetLoc.y + dir[1];
+        } else if (agPos.x == dest.x || agPos.y == dest.y) {
+            // Si está en línea recta, intentar moverse un paso en esa dirección
+            Location nextPos = null;
+            if (agPos.x == dest.x) {
+                // Mismo X, moverse en Y
+                int stepY = (dest.y > agPos.y) ? 1 : -1;
+                nextPos = new Location(agPos.x, agPos.y + stepY);
+            } else {
+                // Mismo Y, moverse en X
+                int stepX = (dest.x > agPos.x) ? 1 : -1;
+                nextPos = new Location(agPos.x + stepX, agPos.y);
+            }
             
-            // Verificar si la posición es válida y el agente puede moverse allí
-            if (isFree(newX, newY) && canMoveTo(ag, newX, newY)) {
-                // Mover al agente a esta posición
-                setAgPos(ag, newX, newY);
+            if (nextPos != null && canMoveTo(Ag, nextPos.x, nextPos.y)) {
+                calculateOwnerDir(Ag, nextPos);
+                setAgPos(Ag, nextPos);
                 return true;
             }
         }
         
-        // Si no se pudo mover a una posición adyacente directamente,
-        // intentar acercarse lo más posible
-        return moveOneStep(ag, targetLoc);
+        // Si lo anterior falla, probar con AStar
+        AStar path = new AStar(this, Ag, agPos, dest);
+        Location nextMove = path.getNextMove();
+        if(nextMove != null) {
+            calculateOwnerDir(Ag, nextMove);
+            setAgPos(Ag, nextMove);
+            return true;
+        } else {
+            // Intentar tratar a otros agentes como no sólidos
+            for (int i = 0; i < 2; i++) { // Solo tenemos 2 agentes (0: robot, 1: owner)
+                if(i != Ag) {
+                    path.setNonSolidNode(getAgPos(i));
+                }
+            }
+            nextMove = path.getNextMove();
+            if(nextMove != null && isFree(nextMove)) {
+                calculateOwnerDir(Ag, nextMove);
+                setAgPos(Ag, nextMove);
+                return true;
+            }
+            
+            // Si todo lo anterior falla, intentar moverse en cualquier dirección libre
+            if (trySimpleMove(Ag, dest)) {
+                return true;
+            }
+        }
+        return false;    
+    }
+    
+    // Método auxiliar para intentar un movimiento simple hacia el destino
+    private boolean trySimpleMove(int Ag, Location dest) {
+        Location agPos = getAgPos(Ag);
+        int dx = Integer.compare(dest.x, agPos.x); // -1, 0, o 1
+        int dy = Integer.compare(dest.y, agPos.y); // -1, 0, o 1
+        
+        // Intentar moverse preferentemente en la dirección del destino
+        Location[] options = new Location[4];
+        options[0] = new Location(agPos.x + dx, agPos.y);
+        options[1] = new Location(agPos.x, agPos.y + dy);
+        options[2] = new Location(agPos.x + dx, agPos.y + dy);
+        options[3] = new Location(agPos.x - dx, agPos.y - dy);
+        
+        for (Location option : options) {
+            if (canMoveTo(Ag, option.x, option.y)) {
+                calculateOwnerDir(Ag, option);
+                setAgPos(Ag, option);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    public boolean apartar(int Ag) {
+        Location loc = getAgPos(Ag);
+        ArrayList<Location> dirs = new ArrayList<>();    
+        boolean aux;
+        aux = canMoveTo(Ag, loc.x, loc.y-1) ? dirs.add(new Location(loc.x, loc.y - 1)) : false;
+        aux = canMoveTo(Ag, loc.x, loc.y + 1) ? dirs.add(new Location(loc.x, loc.y + 1)) : false;
+        aux = canMoveTo(Ag, loc.x - 1, loc.y) ? dirs.add(new Location(loc.x - 1, loc.y)) : false;
+        aux = canMoveTo(Ag, loc.x + 1, loc.y) ? dirs.add(new Location(loc.x + 1, loc.y)) : false;
+
+        if(dirs.size() > 0) {
+            int random = (int) (Math.random() * dirs.size());
+            setAgPos(Ag, dirs.get(random));
+        }
+        return dirs.size() > 0;
+    }
+
+    int getAvailableMedication(String medicamento) {
+        int toRet = 0;
+        switch (medicamento) {
+            case "paracetamol":
+                toRet = availableParacetamol;
+                break;
+            case "ibuprofeno":
+                toRet = availableIbuprofeno;
+                break;
+            case "lorazepam":
+                toRet = availableLorazepam;
+                break;
+            case "aspirina":
+                toRet = availableAspirina;
+                break;
+            case "amoxicilina":
+                toRet = availableAmoxicilina;
+                break;
+            default:
+                break;
+        }
+        return toRet;
+    }
+
+    public void reduceAvailableMedication(String medicamento) {
+        switch (medicamento) {
+            case "paracetamol":
+                availableParacetamol--;
+                break;
+            case "ibuprofeno":
+                availableIbuprofeno--;
+                break;
+            case "lorazepam":
+                availableLorazepam--;
+                break;
+            case "aspirina":
+                availableAspirina--;
+                break;
+            case "amoxicilina":
+                availableAmoxicilina--;
+                break;
+            default:
+                break;
+        }
+    }
+
+    public boolean takeMedication(String medicamento) {
+        if (cabinetOpen && getAvailableMedication(medicamento) > 0) {
+            reduceAvailableMedication(medicamento);
+            carryingMedicamentos++;
+            lastMedicationTaken = medicamento;
+            lastMedicationQuantity = getAvailableMedication(medicamento);
+            return true;
+        } else {
+            if (cabinetOpen) {
+                System.out.println("The cabinet is opened. ");
+            }
+            if (getAvailableMedication(medicamento) > 0) {
+                System.out.println("The cabinet has enough medication. ");
+            }
+            if (carryingMedicamentos == 0) {
+                System.out.println("The robot is not carrying a medication. ");
+            }
+            return false;
+        }
+    }
+
+    public boolean handInMedicamento(int ag) {
+        if (carryingMedicamentos > 0) {
+            carryingMedicamentos--;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public boolean comprobarConsumo(String medicamento, int num) {
+        return getAvailableMedication(medicamento) == num - 1;
+    }
+    
+    public Location getLocation(String loc) {
+        Location dest = null;
+        switch (loc) {
+            case "fridge": dest = lFridge; break;
+            case "cabinet": dest = lMedCabinet; break;
+            case "robot": dest = getAgPos(0); break;
+            case "auxiliar": dest = getAgPos(2); break;
+            case "owner": dest = getAgPos(1); break;
+            case "chair1": dest = lChair1; break;
+            case "chair2": dest = lChair2; break;
+            case "chair3": dest = lChair3; break;
+            case "chair4": dest = lChair4; break;
+            case "bed1": dest = lBed1; break;
+            case "bed2": dest = lBed2; break;
+            case "bed3": dest = lBed3; break;
+            case "sofa": dest = lSofa; break;
+            case "washer": dest = lWasher; break;
+            case "table": dest = lTable; break;
+            case "doorBed1": dest = lDoorBed1; break;
+            case "doorBed2": dest = lDoorBed2; break;
+            case "doorBed3": dest = lDoorBed3; break;
+            case "doorKit1": dest = lDoorKit1; break;
+            case "doorKit2": dest = lDoorKit2; break;
+            case "doorSal1": dest = lDoorSal1; break;
+            case "doorSal2": dest = lDoorSal2; break;
+            case "doorBath1": dest = lDoorBath1; break;
+            case "doorBath2": dest = lDoorBath2; break;
+        }
+        return dest;
+    }
+
+    public boolean deliver(String medicamento, int qtd) {
+        switch (medicamento) {
+            case "paracetamol":
+                deliveredParacetamol += qtd;
+                break;
+            case "ibuprofeno":
+                deliveredIbuprofeno += qtd;
+                break;
+            case "lorazepam":
+                deliveredLorazepam += qtd;
+                break;
+            case "aspirina":
+                deliveredAspirina += qtd;
+                break;
+            case "amoxicilina":
+                deliveredAmoxicilina += qtd;
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    public boolean getDelivery(String medicamento) {
+        switch (medicamento) {
+            case "paracetamol":
+                deliveredParacetamol = 0;
+                break;
+            case "ibuprofeno":
+                deliveredIbuprofeno = 0;
+                break;
+            case "lorazepam":
+                deliveredLorazepam = 0;
+                break;
+            case "aspirina":
+                deliveredAspirina = 0;
+                break;
+            case "amoxicilina":
+                deliveredAmoxicilina = 0;
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    public boolean addMedication(String medicamento, int qtd) {
+        switch (medicamento) {
+            case "paracetamol":
+                availableParacetamol = qtd;
+                break;
+            case "ibuprofeno":
+                availableIbuprofeno = qtd;
+                break;
+            case "lorazepam":
+                availableLorazepam = qtd;
+                break;
+            case "aspirina":
+                availableAspirina = qtd;
+                break;
+            case "amoxicilina":
+                availableAmoxicilina = qtd;
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+    
+    // Métodos para gestión de medicamentos
+    public Set<String> getMedicationNames() {
+        return medications.keySet();
+    }
+    
+    public Medication getMedicationInfo(String medName) {
+        return medications.get(medName);
+    }
+    
+    public int getAvailableParacetamol() {
+        return availableParacetamol;
+    }
+    
+    public int getAvailableIbuprofeno() {
+        return availableIbuprofeno;
+    }
+    
+    public int getAvailableLorazepam() {
+        return availableLorazepam;
+    }
+    
+    public int getAvailableAspirina() {
+        return availableAspirina;
+    }
+    
+    public int getAvailableAmoxicilina() {
+        return availableAmoxicilina;
+    }
+    
+    public List<String> getOwnerMedicamentos() {
+        return ownerMedicamentos;
+    }
+
+    /**
+     * Elimina un medicamento de la lista del propietario
+     * @param medicamento Nombre del medicamento a eliminar
+     */
+    public void removeOwnerMedicamento(String medicamento) {
+        ownerMedicamentos.remove(medicamento);
+    }
+    
+    /**
+     * Añade un medicamento a la lista del propietario
+     * @param medicamento Nombre del medicamento a añadir
+     */
+    public void addOwnerMedicamento(String medicamento) {
+        ownerMedicamentos.add(medicamento);
+    }
+
+    /**
+     * Obtiene la cantidad de medicamentos que está transportando el robot
+     */
+    public int getCarryingMedicamentos() {
+        return carryingMedicamentos;
+    }
+
+    /**
+     * Verifica si el gabinete de medicamentos está abierto
+     */
+    public boolean isCabinetOpen() {
+        return cabinetOpen;
+    }
+    
+    /**
+     * Obtiene el conteo de sorbos
+     */
+    public int getSipCount() {
+        return sipCount;
+    }
+    
+    /**
+     * Obtiene el tamaño de la cuadrícula
+     */
+    public int getGridSize() {
+        return GridSize;
+    }
+    
+    // Getters para las ubicaciones
+    public Location getlSofa() {
+        return lSofa;
+    }
+    
+    public Location getlChair1() {
+        return lChair1;
+    }
+    
+    public Location getlChair2() {
+        return lChair2;
+    }
+    
+    public Location getlChair3() {
+        return lChair3;
+    }
+    
+    public Location getlChair4() {
+        return lChair4;
+    }
+    
+    public Location getlWasher() {
+        return lWasher;
+    }
+    
+    public Location getlFridge() {
+        return lFridge;
+    }
+    
+    public Location getlTable() {
+        return lTable;
+    }
+    
+    public Location getlBed1() {
+        return lBed1;
+    }
+    
+    public Location getlBed2() {
+        return lBed2;
+    }
+    
+    public Location getlBed3() {
+        return lBed3;
+    }
+    
+    public Location getlMedCabinet() {
+        return lMedCabinet;
+    }
+    
+    public Location getlDeliver() {
+        return lDoorHome; // Asumimos que la entrega es en la puerta principal
     }
 }
